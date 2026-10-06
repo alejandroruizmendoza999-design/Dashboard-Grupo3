@@ -1,0 +1,127 @@
+<title>Tablero SaludTotal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: franja de 8 KPIs con semáforo arriba, luego un bloque por objetivo con sus gráficos */
+:root{--bg:#f3f5f7;--surf:#fff;--ink:#12202b;--ink2:#4a5a68;--mute:#7a8996;--line:#dde3e8;--s1:#2a78d6;--s2:#eb6834;--meta:#12202b;
+--good:#0f7a4d;--warn:#b86e00;--bad:#c23030;--goodbg:#e1f3ea;--warnbg:#fbeed6;--badbg:#fbe4e3;--track:#e6ebef;
+--f:'IBM Plex Sans',system-ui,sans-serif;--m:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161c;--surf:#18222b;--ink:#eef2f5;--ink2:#b5c1cb;--mute:#8696a3;--line:#2a3742;--s1:#3987e5;--s2:#d95926;--meta:#eef2f5;
+--good:#4cc38a;--warn:#e9a73a;--bad:#f07272;--goodbg:#173a2c;--warnbg:#3d2f12;--badbg:#42201f;--track:#2a3742;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f161c;--surf:#18222b;--ink:#eef2f5;--ink2:#b5c1cb;--mute:#8696a3;--line:#2a3742;--s1:#3987e5;--s2:#d95926;--meta:#eef2f5;
+--good:#4cc38a;--warn:#e9a73a;--bad:#f07272;--goodbg:#173a2c;--warnbg:#3d2f12;--badbg:#42201f;--track:#2a3742;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);padding-inline:16px;padding-block:20px 40px}
+.w{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font-size:1.5rem;margin:0;font-weight:600;text-wrap:balance}
+.sub{color:var(--ink2);margin:4px 0 0;font-size:.85rem;line-height:1.5}
+h2{font-size:1rem;margin:0;font-weight:600}
+.obj{color:var(--ink2);font-size:.82rem;margin:2px 0 0;line-height:1.45}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.k{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.k .n{font-size:.78rem;color:var(--ink2);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.k .v{font-family:var(--m);font-size:1.7rem;font-weight:500;font-variant-numeric:tabular-nums}
+.k .f{font-size:.72rem;color:var(--mute);line-height:1.35}
+.k .meta{font-size:.78rem;color:var(--ink2)}
+.pill{font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.pill.bad{background:var(--badbg);color:var(--bad)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.good{background:var(--goodbg);color:var(--good)}
+.pill.na{background:var(--track);color:var(--ink2)}
+.sec{display:flex;flex-direction:column;gap:10px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.c{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.c h3{font-size:.85rem;margin:0;font-weight:600}.c p{margin:0;font-size:.74rem;color:var(--mute);line-height:1.4}
+.cv{position:relative;height:220px}
+.gauge{display:flex;flex-direction:column;align-items:center;gap:2px}
+.gauge svg{width:100%;max-width:280px;height:auto}
+.legend{display:flex;gap:14px;font-size:.74rem;color:var(--ink2);flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+table{border-collapse:collapse;width:100%;font-size:.78rem}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--mute);font-weight:500;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+.tw{overflow-x:auto}
+.note{font-size:.74rem;color:var(--mute);line-height:1.5}
+</style>
+<div class="w">
+<header><h1>Tablero ejecutivo SaludTotal</h1>
+<p class="sub">45 farmacias · datos del 1 oct 2025 al 26 mar 2026 · extracto consolidado de TI (ventas, inventario, quejas, fidelización). *Marzo incluye solo hasta el día 26.</p></header>
+<div class="strip" id="strip"></div>
+<section class="sec"><div><h2>Objetivo 1 · Disponibilidad de producto</h2><p class="obj">Bajar la tasa de quiebre de 35.7% a 15% y las quejas por falta de stock de 90 a 35 al mes, hasta el 31 mar 2027.</p></div>
+<div class="g">
+<div class="c"><h3>Tasa de quiebre de stock</h3><div class="gauge" id="g1"></div><p>Registros de inventario con stock bajo el mínimo (Quiebre_Stock = Sí) sobre el total. Meta ≤ 15%.</p></div>
+<div class="c"><h3>Quiebre mensual (%)</h3><div class="cv"><canvas id="c1"></canvas></div></div>
+<div class="c"><h3>Quejas por falta de stock al mes</h3><div class="cv"><canvas id="c2"></canvas></div></div>
+<div class="c"><h3>Quiebre por ciudad, 8 más altas (%)</h3><div class="cv"><canvas id="c3"></canvas></div></div>
+</div></section>
+<section class="sec"><div><h2>Objetivo 2 · Experiencia y fidelización</h2><p class="obj">Subir la satisfacción de 2.99 a 4.0, bajar la resolución de 61 a 36 horas y reducir clientes inactivos de 50% a 30%, hasta el 31 mar 2027.</p></div>
+<div class="g">
+<div class="c"><h3>Satisfacción post-resolución (1 a 5)</h3><div class="gauge" id="g2"></div><p>Promedio de 713 quejas resueltas con calificación. Meta ≥ 4.0.</p></div>
+<div class="c"><h3>Horas promedio de resolución por tipo</h3><div class="cv"><canvas id="c4"></canvas></div></div>
+<div class="c"><h3>Clientes inactivos (+90 días) por segmento (%)</h3><div class="cv"><canvas id="c5"></canvas></div></div>
+</div></section>
+<section class="sec"><div><h2>Objetivo 3 · Rentabilidad y decisión a tiempo</h2><p class="obj">Volver a crecer en ventas diarias (+8%), subir el margen bruto a 49% y entregar el reporte en 1 día en vez de 10, hasta el 31 mar 2027.</p></div>
+<div class="g">
+<div class="c"><h3>Venta diaria promedio (S/)</h3><div class="cv"><canvas id="c6"></canvas></div></div>
+<div class="c"><h3>Margen bruto por categoría (%)</h3><div class="cv"><canvas id="c7"></canvas></div><p>Medicamentos de Marca rinde 34.9% y arrastra el margen total.</p></div>
+<div class="c"><h3>Semáforo de metas</h3><div class="tw"><table id="tb"></table></div>
+<p>Verde: meta lograda. Ámbar: brecha de hasta 10% de la meta. Rojo: brecha mayor.</p></div>
+</div></section>
+<p class="note">Fuente: SaludTotal_Datos_Actividad_Sem07.xlsx. Los montos corresponden al extracto entregado y son menores a la facturación mensual de S/ 2.5 millones del caso. Fórmulas y celdas de cada KPI en el informe del equipo.</p>
+</div>
+<script>
+const D={"meses": ["Oct 25", "Nov 25", "Dic 25", "Ene 26", "Feb 26", "Mar 26*"], "ventas_dia": [4100.0, 4173.0, 4207.0, 4212.0, 4097.0, 4000.0], "ventas_mes": [127098.0, 125183.0, 130402.0, 130576.0, 114706.0, 103994.0], "quiebre_mes": [36.4, 37.2, 39.2, 36.9, 34.7, 30.0], "quejas_stock_mes": [100, 96, 109, 76, 83, 74], "ciudad_q": [["Huancayo", 46.3], ["Cajamarca", 44.4], ["Chimbote", 42.6], ["Chiclayo", 42.2], ["Tacna", 38.9], ["Arequipa", 37.5], ["Piura", 37.5], ["Cusco", 37.0]], "tipo_t": [["Mala atención", 68.2], ["Producto vencido", 63.1], ["Atención lenta", 61.1], ["Falta de stock", 61.1], ["Error en precio", 59.2], ["Error en despacho", 58.6]], "seg_inact": [["Platinum", 48.0], ["Gold", 54.0], ["Silver", 49.0], ["Bronce", 49.7]], "cat_mb": [["Medicamentos de Marca", 34.9], ["Vitaminas y Suplementos", 49.9], ["Equipos y Dispositivos", 49.9], ["Dermocosmética", 49.9], ["Cuidado Personal", 50.0], ["Medicamentos Genéricos", 50.0]], "k": {"quiebre": 35.74, "dias": 2.24, "qstock": 89.67, "csat": 2.99, "tres": 61.37, "inact": 50.0, "crec": -1.21, "mb": 47.43, "Q4": 4159.59, "Q1": 4109.13}};const K=D.k;
+const KP=[
+{n:'Tasa de quiebre de stock',v:K.quiebre,u:'%',d:1,meta:'≤ 15%',ok:v=>v<=15,gap:v=>(v-15)/15,f:'Quiebres Sí ÷ registros de inventario'},
+{n:'Días sin stock por SKU-local',v:K.dias,u:' días',d:2,meta:'≤ 0.8 días',ok:v=>v<=.8,gap:v=>(v-.8)/.8,f:'Promedio de Dias_Sin_Stock_Mes'},
+{n:'Quejas por falta de stock / mes',v:K.qstock,u:'',d:1,meta:'≤ 35',ok:v=>v<=35,gap:v=>(v-35)/35,f:'538 quejas ÷ 6 meses'},
+{n:'Satisfacción del cliente',v:K.csat,u:' / 5',d:2,meta:'≥ 4.0',ok:v=>v>=4,gap:v=>(4-v)/4,f:'Promedio Satisfaccion_Cliente (713 casos)'},
+{n:'Tiempo de resolución',v:K.tres,u:' h',d:1,meta:'≤ 36 h',ok:v=>v<=36,gap:v=>(v-36)/36,f:'Promedio Tiempo_Resolucion_Horas'},
+{n:'Clientes inactivos +90 días',v:K.inact,u:'%',d:1,meta:'≤ 30%',ok:v=>v<=30,gap:v=>(v-30)/30,f:'Última compra antes del 26 dic 2025 ÷ 850'},
+{n:'Crecimiento venta diaria (3M vs 3M)',v:K.crec,u:'%',d:1,meta:'≥ +8%',ok:v=>v>=8,gap:v=>(8-v)/8,f:'S/ 4,109 (ene–mar) vs S/ 4,160 (oct–dic)'},
+{n:'Margen bruto',v:K.mb,u:'%',d:1,meta:'≥ 49%',ok:v=>v>=49,gap:v=>(49-v)/49,f:'(Ventas − Costos) ÷ Ventas'}];
+function st(k){if(k.ok(k.v))return['good','Meta lograda'];return k.gap(k.v)<=.1?['warn','Cerca']:['bad','Crítico']}
+const sg=x=>x>0?'+'+x.toFixed(1):x.toFixed(1);
+document.getElementById('strip').innerHTML=KP.map(k=>{const s=st(k);const val=k.u==='%'&&k.n.startsWith('Crec')?sg(k.v):k.v.toFixed(k.d);
+return `<div class="k"><div class="n"><span>${k.n}</span><span class="pill ${s[0]}">${s[1]}</span></div><div class="v">${val}${k.u}</div><div class="meta">Meta ${k.meta}</div><div class="f">${k.f}</div></div>`}).join('')+
+`<div class="k"><div class="n"><span>Demora del reporte</span><span class="pill na">Dato del caso</span></div><div class="v">10 días</div><div class="meta">Meta ≤ 1 día</div><div class="f">No se mide en el Excel; viene del caso</div></div>`;
+document.getElementById('tb').innerHTML='<tr><th>KPI</th><th>Actual</th><th>Meta</th><th>Estado</th></tr>'+KP.map(k=>{const s=st(k);const val=k.n.startsWith('Crec')?sg(k.v)+'%':k.v.toFixed(k.d)+k.u;return `<tr><td>${k.n}</td><td>${val}</td><td>${k.meta}</td><td><span class="pill ${s[0]}">${s[1]}</span></td></tr>`}).join('');
+function gauge(id,val,min,max,meta,fmt,lowerBetter){
+const cx=140,cy=135,r=105,W=18;const a=t=>Math.PI*(1-(t-min)/(max-min));
+const pt=(t,rr)=>[cx+rr*Math.cos(a(t)),cy-rr*Math.sin(a(t))];
+const arc=(t0,t1,col)=>{const p0=pt(t0,r),p1=pt(t1,r);return `<path d="M${p0[0]} ${p0[1]} A${r} ${r} 0 0 1 ${p1[0]} ${p1[1]}" fill="none" stroke="${col}" stroke-width="${W}"/>`};
+const m0=pt(meta,r-W/2-3),m1=pt(meta,r+W/2+3),n=pt(val,r-W/2-8);
+const bad=lowerBetter?val>meta:val<meta;
+const col=bad?'var(--bad)':'var(--good)';
+const [vx,vy]=pt(val,r);
+document.getElementById(id).innerHTML=`<svg viewBox="0 0 280 175" role="img" aria-label="${fmt(val)}, meta ${fmt(meta)}">${arc(min,max,'var(--track)')}${arc(min,val,col)}
+<line x1="${m0[0]}" y1="${m0[1]}" x2="${m1[0]}" y2="${m1[1]}" stroke="var(--meta)" stroke-width="3"/>
+<text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="34" font-family="IBM Plex Mono,monospace" font-weight="500" fill="var(--ink)">${fmt(val)}</text>
+<text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="12" fill="var(--ink2)">Meta ${fmt(meta)} (marca negra)</text>
+<text x="${cx-r}" y="${cy+16}" text-anchor="middle" font-size="11" fill="var(--mute)">${fmt(min)}</text><text x="${cx+r}" y="${cy+16}" text-anchor="middle" font-size="11" fill="var(--mute)">${fmt(max)}</text></svg>`}
+gauge('g1',K.quiebre,0,100,15,x=>x.toFixed(x%1?1:0)+'%',true);
+gauge('g2',K.csat,1,5,4,x=>x.toFixed(x%1?2:1),false);
+const cs=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let charts=[];
+function draw(){charts.forEach(c=>c.destroy());charts=[];
+const ink=cs('--ink2'),grid=cs('--line'),s1=cs('--s1'),s2=cs('--s2'),meta=cs('--meta');
+Chart.defaults.font.family="'IBM Plex Sans',sans-serif";Chart.defaults.color=ink;
+const base=(extra={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:ink}},y:{grid:{color:grid},border:{display:false},ticks:{color:ink},beginAtZero:true}},...extra});
+const mk=(id,cfg)=>charts.push(new Chart(document.getElementById(id),cfg));
+const metaDs=(arr,l)=>({type:'line',label:l,data:arr,borderColor:meta,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false});
+const M=D.meses;
+let o=base();o.plugins.legend={display:true,labels:{boxWidth:14,color:ink}};o.scales.y.max=45;
+mk('c1',{type:'line',data:{labels:M,datasets:[{label:'Quiebre',data:D.quiebre_mes,borderColor:s1,backgroundColor:s1+'22',fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:s1,tension:.2},metaDs(M.map(_=>15),'Meta 15%')]},options:o});
+o=base();o.plugins.legend={display:true,labels:{boxWidth:14,color:ink}};
+mk('c2',{type:'bar',data:{labels:M,datasets:[{label:'Quejas',data:D.quejas_stock_mes,backgroundColor:s1,borderRadius:4,maxBarThickness:34},metaDs(M.map(_=>35),'Meta 35')]},options:o});
+o=base({indexAxis:'y'});o.scales={x:{grid:{color:grid},border:{display:false},beginAtZero:true,max:60,ticks:{color:ink}},y:{grid:{display:false},ticks:{color:ink}}};
+mk('c3',{type:'bar',data:{labels:D.ciudad_q.map(a=>a[0]),datasets:[{label:'Quiebre %',data:D.ciudad_q.map(a=>a[1]),backgroundColor:s1,borderRadius:4,maxBarThickness:16}]},options:o});
+o=base({indexAxis:'y'});o.scales={x:{grid:{color:grid},border:{display:false},beginAtZero:true,max:80,ticks:{color:ink}},y:{grid:{display:false},ticks:{color:ink}}};
+mk('c4',{type:'bar',data:{labels:D.tipo_t.map(a=>a[0]),datasets:[{label:'Horas',data:D.tipo_t.map(a=>a[1]),backgroundColor:s1,borderRadius:4,maxBarThickness:16}]},options:o});
+o=base();o.plugins.legend={display:true,labels:{boxWidth:14,color:ink}};o.scales.y.max=70;
+mk('c5',{type:'bar',data:{labels:D.seg_inact.map(a=>a[0]),datasets:[{label:'Inactivos %',data:D.seg_inact.map(a=>a[1]),backgroundColor:s1,borderRadius:4,maxBarThickness:44},metaDs(D.seg_inact.map(_=>30),'Meta 30%')]},options:o});
+o=base();o.scales.y.min=3500;o.scales.y.beginAtZero=false;
+mk('c6',{type:'line',data:{labels:M,datasets:[{label:'S/ por día',data:D.ventas_dia,borderColor:s1,backgroundColor:s1+'22',fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:s1,tension:.2}]},options:o});
+o=base({indexAxis:'y'});o.scales={x:{grid:{color:grid},border:{display:false},beginAtZero:true,max:60,ticks:{color:ink}},y:{grid:{display:false},ticks:{color:ink}}};
+mk('c7',{type:'bar',data:{labels:D.cat_mb.map(a=>a[0]),datasets:[{label:'Margen %',data:D.cat_mb.map(a=>a[1]),backgroundColor:D.cat_mb.map(a=>a[1]<45?s2:s1),borderRadius:4,maxBarThickness:16}]},options:o});
+}
+draw();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(draw,50));
+new MutationObserver(()=>setTimeout(draw,50)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>
